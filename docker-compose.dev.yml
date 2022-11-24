@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  confusion-server:
+    build: .
+    ports:
+      - 3000:3000
+    environment:
+      SERVER_PORT: 3000
+      # MONGODB_URL=mongodb://root:example@mongo:27017/confusion
+      MONGODB_URL: mongodb://mongo:27017
+      DB_NAME: my_db
+    volumes:
+      - ./:/usr/src/app:ro
+    depends_on:
+      - mongo
+    command: npm start
+
+  mongo:
+    image: mongo
+    ports:
+      - 27017:27017
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: root
+    #   MONGO_INITDB_ROOT_PASSWORD: example
+    #   MONGO_INITDB_DATABASE: confusion
+    volumes:
+      - mongodb:/data/db
+      - mongodb_config:/data/configdb
+volumes:
+  mongodb:
+  mongodb_config:
