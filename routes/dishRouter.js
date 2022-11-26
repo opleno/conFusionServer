@@ -11,6 +11,7 @@ dishRouter.use(express.static(__dirname + "/public"));
 
 dishRouter
   .route("/")
+
   .get((req, res, next) => {
     Dishes.find({})
       .then(
@@ -23,6 +24,7 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .post((req, res, next) => {
     Dishes.create(req.body)
       .then(
@@ -37,6 +39,7 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .put((req, res, next) => {
     res.statusCode = 403;
     res.end("PUT operation not supported in /dishes");
@@ -61,6 +64,7 @@ dishRouter
 
 dishRouter
   .route("/:dishId")
+
   .get((req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
@@ -115,6 +119,7 @@ dishRouter
 
 dishRouter
   .route("/:dishId/comments")
+
   .get((req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
@@ -133,6 +138,7 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .post((req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
@@ -157,6 +163,7 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .put((req, res, next) => {
     res.statusCode = 403;
     res.end(
@@ -165,6 +172,7 @@ dishRouter
         "/comments"
     );
   })
+
   .delete((req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
@@ -198,6 +206,7 @@ dishRouter
 
 dishRouter
   .route("/:dishId/comments/:commentId")
+
   .get((req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
@@ -220,6 +229,7 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .post((req, res, next) => {
     res.statusCode = 403;
     res.end(
@@ -229,6 +239,7 @@ dishRouter
         req.params.commentId
     );
   })
+
   .put((req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
@@ -262,6 +273,7 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+  
   .delete((req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
