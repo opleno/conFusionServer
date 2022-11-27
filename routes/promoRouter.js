@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 
 const Promos = require("../models/promotions");
 var authenticate = require("../authenticate");
+const cors = require("./cors");
+
 const { MongoNotConnectedError } = require("mongodb");
 
 const promoRouter = express.Router();
@@ -13,7 +15,11 @@ promoRouter.use(express.static(__dirname + "/public"));
 promoRouter
   .route("/")
 
-  .get((req, res, next) => {
+  .options(cors.corsWithOptions, (req, res) => {
+    res.sendStatus(200);
+  })
+
+  .get(cors.cors, (req, res, next) => {
     Promos.find({})
       .then(
         (promos) => {
@@ -27,6 +33,7 @@ promoRouter
   })
 
   .post(
+    cors.corsWithOptions,
     authenticate.verifyUser,
     authenticate.verifyAdmin,
     (req, res, next) => {
@@ -46,6 +53,7 @@ promoRouter
   )
 
   .put(
+    cors.corsWithOptions,
     authenticate.verifyUser,
     authenticate.verifyAdmin,
     (req, res, next) => {
@@ -55,6 +63,7 @@ promoRouter
   )
 
   .delete(
+    cors.corsWithOptions,
     authenticate.verifyUser,
     authenticate.verifyAdmin,
     (req, res, next) => {
@@ -77,7 +86,11 @@ promoRouter
 promoRouter
   .route("/:promoId")
 
-  .get((req, res, next) => {
+  .options(cors.corsWithOptions, (req, res) => {
+    res.sendStatus(200);
+  })
+
+  .get(cors.cors, (req, res, next) => {
     Promos.findById(req.params.promoId)
       .then(
         (promo) => {
@@ -91,6 +104,7 @@ promoRouter
   })
 
   .post(
+    cors.corsWithOptions,
     authenticate.verifyUser,
     authenticate.verifyAdmin,
     (req, res, next) => {
@@ -102,6 +116,7 @@ promoRouter
   )
 
   .put(
+    cors.corsWithOptions,
     authenticate.verifyUser,
     authenticate.verifyAdmin,
     (req, res, next) => {
@@ -123,6 +138,7 @@ promoRouter
   )
 
   .delete(
+    cors.corsWithOptions,
     authenticate.verifyUser,
     authenticate.verifyAdmin,
     (req, res, next) => {
