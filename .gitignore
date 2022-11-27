@@ -133,3 +133,4 @@ dist
 # extra
 db.json
 images/
+config.js
