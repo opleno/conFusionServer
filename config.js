@@ -1,4 +1,8 @@
 module.exports = {
-  secretKey: "12345-67890-09876-54321",
+  secretKey: "some secret",
   mongoUrl: "mongodb://localhost:27017/confusion",
+  facebook: {
+    clientId: "1115050202543835",
+    clientSecret: "some secret",
+  },
 };
