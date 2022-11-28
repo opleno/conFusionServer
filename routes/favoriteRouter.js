@@ -6,11 +6,19 @@ const Favorite = require("../models/favorite");
 var authenticate = require("../authenticate");
 const cors = require("./cors");
 
-const { MongoNotConnectedError } = require("mongodb");
+const { MongoNotConnectedError, ObjectId } = require("mongodb");
 
 const favoriteRouter = express.Router();
 
 favoriteRouter.use(express.static(__dirname + "/public"));
+
+// cannot use indexOf so I'll use this:
+function arrayObjectIndexOf(myArray, property, searchTerm) {
+  for (var i = 0, len = myArray.length; i < len; i++) {
+    if (myArray[i][property].equals(new ObjectId(searchTerm))) return i;
+  }
+  return -1;
+}
 
 favoriteRouter
   .route("/")
@@ -20,7 +28,9 @@ favoriteRouter
   })
 
   .get(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
-    Favorite.find({})
+    Favorite.find({ userId: req.user._id })
+      .populate("userId")
+      .populate("dishes._id")
       .then(
         (favorites) => {
           res.statusCode = 200;
@@ -33,7 +43,7 @@ favoriteRouter
   })
 
   .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
-    Favorite.create(req.body)
+    Favorite.create({ userId: req.user._id, dishes: req.body })
       .then(
         (leader) => {
           console.log("leader created: ", leader);
@@ -53,7 +63,7 @@ favoriteRouter
   })
 
   .delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
-    Favorite.remove({})
+    Favorite.remove({ userId: req.user._id })
       .then(
         (response) => {
           res.statusCode = 200;
@@ -78,64 +88,60 @@ favoriteRouter
   .get(cors.cors, (req, res, next) => {
     res.statusCode = 403;
     res.end("GET operation not supported in /favorites");
-    // Favorite.findById(req.params.dishId)
-    //   .then(
-    //     (leader) => {
-    //       res.statusCode = 200;
-    //       res.setHeader("Content-Type", "application/json");
-    //       res.json(leader);
-    //     },
-    //     (err) => next(err)
-    //   )
-    //   .catch((err) => next(err));
   })
 
   .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
-    /**
-     * find Favorite document by user
-     *
-     */
-    console.log("Entering Post Favorite");
-    console.log("req.user._id: " + req.user._id);
+    console.log("Entering Post /favorite/:dishId");
 
-    // Favorite.updateOne(
-    //   { userId: req.user._id },
-    //   { $push: { dishes: req.params.dishId } }
-    // )
-
-    // Favorite.findByIdAndUpdate(
-    //   req.user._id,
-    //   { $set: req.body },
-    //   { new: true }
-    // )
-
+    // Find the Favorite document associated to the userId
     Favorite.find({ userId: req.user._id })
       .then(
         (fav) => {
           if (fav.length === 1) {
-            console.log("Fav was found: ", fav);
+            console.log("Fav doc was found: ", fav);
 
-            Favorite.updateOne(
-              { userId: req.user._id },
-              { $push: { dishes: req.params.dishId } }
-            )
-              .then(
-                (resp) => {
-                  console.log("Fav updated");
+            // Find if the dishId is already in the dishes array of the Favorite document
+            // if (fav[0].dishes.map(e => e._id).indexOf(req.params.dishId) !== -1) {
+            if (
+              arrayObjectIndexOf(fav[0].dishes, "_id", req.params.dishId) !== -1
+            ) {
+              console.log("Fav repeated error");
 
-                  res.statusCode = 200;
-                  res.setHeader("Content-Type", "application/json");
-                  res.json(resp);
-                },
-                (err) => next(err)
+              var err = new Error(
+                "Dish " +
+                  req.params.dishId +
+                  " already present in this favorite"
+              );
+              err.status = 400;
+              return next(err);
+            }
+
+            // req.params.dishId is not there yet, should be added to the dishes array
+            else {
+              console.log("dish not found in Fav doc, proceed to add it");
+
+              Favorite.updateOne(
+                { userId: req.user._id },
+                { $push: { dishes: { _id: req.params.dishId } } }
               )
-              .catch((err) => next(err));
+                .then(
+                  (resp) => {
+                    console.log("Fav doc updated");
+
+                    res.statusCode = 200;
+                    res.setHeader("Content-Type", "application/json");
+                    res.json(resp);
+                  },
+                  (err) => next(err)
+                )
+                .catch((err) => next(err));
+            }
           } else if (fav.length === 0) {
             console.log("updateOne could not find referred favorite");
 
             Favorite.create({
               userId: req.user._id,
-              dishes: [req.params.dishId],
+              dishes: [{ _id: req.params.dishId }],
             })
               .then(
                 (fav) => {
@@ -153,10 +159,12 @@ favoriteRouter
           }
         },
         (err) => {
-          console.log("Favorite Post Error: ", err);
+          next(err);
         }
       )
-      .catch((err) => next(err));
+      .catch((err) => {
+        next(err);
+      });
   })
 
   .put(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
