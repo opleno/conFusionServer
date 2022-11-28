@@ -43,18 +43,74 @@ favoriteRouter
   })
 
   .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
-    Favorite.create({ userId: req.user._id, dishes: req.body })
-      .then(
-        (leader) => {
-          console.log("leader created: ", leader);
+    console.log("Entering Post /favorite");
 
-          res.statusCode = 201;
-          res.setHeader("Content-Type", "application/json");
-          res.json(leader);
+    // Find the Favorite document associated to the userId
+    Favorite.find({ userId: req.user._id })
+      .then(
+        (fav) => {
+          if (fav.length === 1) {
+            console.log("Fav doc was found: ", fav);
+
+            req.body.forEach((dishTuple) => {
+              // Find if the dishId is already in the dishes array of the Favorite document
+              if (
+                arrayObjectIndexOf(fav[0].dishes, "_id", dishTuple._id) !== -1
+              ) {
+                console.log(
+                  "Dish " + dishTuple._id + " already present in this favorite"
+                );
+              }
+              // dishTuple._id is not there yet, should be added to the dishes array
+              else {
+                console.log("dish not found in Fav doc, proceed to add it");
+
+                Favorite.updateOne(
+                  { userId: req.user._id },
+                  { $push: { dishes: { _id: dishTuple._id } } }
+                )
+                  .then(
+                    (resp) => {
+                      console.log("Fav doc updated");
+                      console.log("Resp", resp);
+                    },
+                    (err) => next(err)
+                  )
+                  .catch((err) => next(err));
+              }
+            });
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.json("Favorites (the ones which were not present yet) added succesfully");
+          } else if (fav.length === 0) {
+            console.log("updateOne could not find referred favorite");
+
+            Favorite.create({
+              userId: req.user._id,
+              dishes: req.body, // [{ _id: req.params.dishId }],
+            })
+              .then(
+                (fav) => {
+                  console.log("Favorite created: ", fav);
+
+                  res.statusCode = 201;
+                  res.setHeader("Content-Type", "application/json");
+                  res.json(fav);
+                },
+                (err) => next(err)
+              )
+              .catch((err) => next(err));
+          } else {
+            return next(err);
+          }
         },
-        (err) => next(err)
+        (err) => {
+          next(err);
+        }
       )
-      .catch((err) => next(err));
+      .catch((err) => {
+        next(err);
+      });
   })
 
   .put(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
@@ -101,7 +157,6 @@ favoriteRouter
             console.log("Fav doc was found: ", fav);
 
             // Find if the dishId is already in the dishes array of the Favorite document
-            // if (fav[0].dishes.map(e => e._id).indexOf(req.params.dishId) !== -1) {
             if (
               arrayObjectIndexOf(fav[0].dishes, "_id", req.params.dishId) !== -1
             ) {
