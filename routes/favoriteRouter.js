@@ -81,7 +81,9 @@ favoriteRouter
             });
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
-            res.json("Favorites (the ones which were not present yet) added succesfully");
+            res.json({
+              msg: "Favorites (the ones which were not present yet) added succesfully",
+            });
           } else if (fav.length === 0) {
             console.log("updateOne could not find referred favorite");
 
@@ -228,16 +230,67 @@ favoriteRouter
   })
 
   .delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
-    Favorite.findByIdAndDelete(req.params.dishId)
+    Favorite.find({ userId: req.user._id })
       .then(
-        (resp) => {
-          res.statusCode = 200;
-          res.setHeader("Content-Type", "application/json");
-          res.json(resp);
+        (fav) => {
+          if (fav.length === 1) {
+            console.log("Fav doc was found: ", fav);
+
+            // Find if the dishId is already in the dishes array of the Favorite document
+            var dishIndex = arrayObjectIndexOf(
+              fav[0].dishes,
+              "_id",
+              req.params.dishId
+            );
+
+            if (dishIndex !== -1) {
+              console.log("Fav repeated error");
+
+              Favorite.updateOne(
+                { userId: req.user._id },
+                { $pull: { dishes: { _id: req.params.dishId } } }
+              )
+                .then(
+                  (resp) => {
+                    console.log("Fav doc updated");
+
+                    res.statusCode = 200;
+                    res.setHeader("Content-Type", "application/json");
+                    res.json(resp);
+                  },
+                  (err) => next(err)
+                )
+                .catch((err) => next(err));
+            }
+
+            // req.params.dishId is not there yet, should be added to the dishes array
+            else {
+              console.log("dish not found in Fav doc");
+
+              var err = new Error(
+                "Dish " +
+                  req.params.dishId +
+                  " not present in this favorite document"
+              );
+              err.status = 400;
+              return next(err);
+            }
+          } else if (fav.length === 0) {
+            console.log("updateOne could not find referred favorite");
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.json({ msg: "Logged user has no favorites" });
+          } else {
+            return next(err);
+          }
         },
-        (err) => next(err)
+        (err) => {
+          next(err);
+        }
       )
-      .catch((err) => next(err));
+      .catch((err) => {
+        next(err);
+      });
   });
 
 module.exports = favoriteRouter;
